@@ -10,6 +10,7 @@ import (
 	"github.com/diffdiff/foodji/app/model"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
+	"github.com/rs/cors"
 )
 
 // App has router and db instances
@@ -38,41 +39,56 @@ func (a *App) Initialize(config *config.Config) {
 
 // Set all required routers
 func (a *App) setRouters() {
-	// Routing for handling the projects
-	a.Get("/products", a.GetAllProducts)
-	a.Post("/products", a.CreateProduct)
-	a.Get("/products/{title}", a.GetProduct)
-	a.Put("/products/{title}", a.UpdateProduct)
-	a.Delete("/products/{title}", a.DeleteProduct)
+	api := a.Router.PathPrefix("/api/v1/").Subrouter()
 
-	a.Get("/manufacturers", a.GetAllManufacturers)
-	a.Post("/manufacturers", a.CreateManufacturer)
-	a.Get("/manufacturers/{title}", a.GetManufacturer)
-	a.Put("/manufacturers/{title}", a.UpdateManufacturer)
-	a.Delete("/manufacturers/{title}", a.DeleteManufacturer)
+	// Routing for handling the projects
+	api.HandleFunc("/products", a.GetAllProducts).Methods("GET")
+	api.HandleFunc("/products", a.CreateProduct).Methods("POST")
+	api.HandleFunc("/products/{id}", a.GetProduct).Methods("GET")
+	api.HandleFunc("/products/{id}", a.UpdateProduct).Methods("PUT")
+	api.HandleFunc("/products/{id}", a.DeleteProduct).Methods("DELETE")
+
+	api.HandleFunc("/manufacturers", a.GetAllManufacturers).Methods("GET")
+	api.HandleFunc("/manufacturers", a.CreateManufacturer).Methods("POST")
+	api.HandleFunc("/manufacturers/{id}", a.GetManufacturer).Methods("GET")
+	api.HandleFunc("/manufacturers/{id}", a.UpdateManufacturer).Methods("PUT")
+	api.HandleFunc("/manufacturers/{id}", a.DeleteManufacturer).Methods("DELETE")
+
+	// Serve static assets directly.
+	a.Router.PathPrefix("/*").Handler(http.FileServer(http.Dir("./dist/ui")))
+	a.Router.PathPrefix("/").HandlerFunc(IndexHandler("./ui/dist/ui/index.html"))
 }
 
-// Wrap the router for GET method
+// IndexHandler entry point for web app
+func IndexHandler(entrypoint string) func(w http.ResponseWriter, r *http.Request) {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, entrypoint)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
+// Get App Wrap the router for GET method
 func (a *App) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("GET")
 }
 
-// Wrap the router for POST method
+//Post App Wrap the router for POST method
 func (a *App) Post(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("POST")
 }
 
-// Wrap the router for PUT method
+//Put App  Wrap the router for PUT method
 func (a *App) Put(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("PUT")
 }
 
-// Wrap the router for DELETE method
+// Delete App Wrap the router for DELETE method
 func (a *App) Delete(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("DELETE")
 }
 
-// Handlers to manage Product Data
+// GetAllManufacturers Handlers to manage Product Data
 func (a *App) GetAllManufacturers(w http.ResponseWriter, r *http.Request) {
 	handler.GetAllManufactures(a.DB, w, r)
 }
@@ -116,5 +132,10 @@ func (a *App) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 // Run the app on it's router
 func (a *App) Run(host string) {
-	log.Fatal(http.ListenAndServe(host, a.Router))
+	c := cors.AllowAll()
+
+	handler := c.Handler(a.Router)
+
+	// start server listen
+	log.Fatal(http.ListenAndServe(host, handler))
 }

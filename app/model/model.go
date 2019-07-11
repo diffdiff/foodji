@@ -8,7 +8,7 @@ import (
 // Product
 type Product struct {
 	gorm.Model
-	// ProductID    uint         `gorm:"type: int; PRIMARY_KEY; AUTO_INCREMENT"`
+	id             int     `gorm:"type: int; PRIMARY_KEY; AUTO_INCREMENT"`
 	Name           string  `json:"name"`
 	Ingredients    string  `json:"ingredients"`
 	Description    string  `json:"description"`
@@ -20,17 +20,17 @@ type Product struct {
 // Manufacturer
 type Manufacturer struct {
 	gorm.Model
-	// ManufacturerID uint      `gorm:"type: int; PRIMARY_KEY; AUTO_INCREMENT"`
+	id        int    `gorm:"type: int; PRIMARY_KEY; AUTO_INCREMENT"`
 	Name      string `json:"name"`
 	Address   string `json:"address"`
 	Contacts  string `json:"contacts"`
 	ProductID uint
-	Product   []Product `gorm:"foreignKey:product_id"`
+	Product   []Product `gorm:"foreignKey:id"`
 }
 
 // DBMigrate
 func DBMigrate(db *gorm.DB) *gorm.DB {
-	db.DropTableIfExists(&Product{}, &Manufacturer{})
+	// db.DropTableIfExists(&Product{}, &Manufacturer{})
 	db.AutoMigrate(&Product{}, &Manufacturer{})
 	// db.Model(&Product{}).AddForeignKey("manufacturer_id", "manufacturers(id)", "CASCADE", "CASCADE")
 	// db.Model(&Manufacturer{}).AddForeignKey("product_id", "products(id)", "CASCADE", "CASCADE")
